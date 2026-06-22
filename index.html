@@ -1,0 +1,1103 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no" />
+<title>สมุดบันทึกใบเสนอราคา</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+Thai:wght@500;600;700&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+
+<script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/@babel/standalone@7/babel.min.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+
+<style>
+  :root{
+    --paper:#F2ECDF;
+    --paper-soft:#E8DFC8;
+    --ink:#1F2A44;
+    --ink-soft:#5B6478;
+    --moss:#3F6E58;
+    --rust:#B5512B;
+    --rust-soft:#E7C3AE;
+    --line:#C9BFA8;
+    --white:#FBF8F0;
+    --danger:#A23B2E;
+    --radius:14px;
+    --shadow:0 2px 10px rgba(31,42,68,0.08), 0 1px 2px rgba(31,42,68,0.10);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--paper);
+    background-image:
+      radial-gradient(circle at 1px 1px, rgba(31,42,68,0.045) 1px, transparent 0);
+    background-size: 18px 18px;
+    color:var(--ink);
+    font-family:'IBM Plex Sans Thai','Inter',sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3,.display{font-family:'Noto Serif Thai',serif;}
+  .mono{font-family:'JetBrains Mono',monospace;}
+  button{font-family:inherit;cursor:pointer;}
+  input,select,textarea{font-family:inherit;}
+  #root{min-height:100vh;display:flex;flex-direction:column;}
+
+  /* ---------- Top bar ---------- */
+  .topbar{
+    position:sticky;top:0;z-index:30;
+    background:var(--ink);
+    color:var(--white);
+    padding:14px 16px 12px;
+    box-shadow:0 2px 8px rgba(0,0,0,0.18);
+  }
+  .topbar-row{display:flex;align-items:center;gap:10px;}
+  .topbar-title{font-size:18px;font-weight:600;letter-spacing:0.2px;flex:1;}
+  .topbar-title .sub{display:block;font-size:11px;color:#C9D4DA;font-weight:400;font-family:'IBM Plex Sans Thai';margin-top:1px;}
+  .icon-btn{
+    width:38px;height:38px;border-radius:10px;border:1px solid rgba(255,255,255,0.18);
+    background:rgba(255,255,255,0.06);color:var(--white);
+    display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;
+  }
+  .icon-btn:active{background:rgba(255,255,255,0.16);}
+  .searchbar{
+    margin-top:10px;display:flex;align-items:center;gap:8px;
+    background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.16);
+    border-radius:10px;padding:9px 12px;
+  }
+  .searchbar input{
+    background:transparent;border:none;outline:none;color:var(--white);
+    font-size:14px;flex:1;
+  }
+  .searchbar input::placeholder{color:#9aa3b8;}
+
+  /* ---------- Category tabs ---------- */
+  .tabs{display:flex;gap:6px;overflow-x:auto;padding:10px 14px 0;-webkit-overflow-scrolling:touch;}
+  .tabs::-webkit-scrollbar{display:none;}
+  .tab{
+    flex-shrink:0;padding:7px 14px;border-radius:999px;border:1px solid var(--line);
+    background:var(--white);color:var(--ink-soft);font-size:13px;font-weight:600;
+    white-space:nowrap;
+  }
+  .tab.active{background:var(--ink);color:var(--white);border-color:var(--ink);}
+  .tab .count{opacity:0.65;font-weight:500;margin-left:4px;}
+
+  /* ---------- List ---------- */
+  .list-wrap{flex:1;padding:14px 14px 100px;max-width:760px;margin:0 auto;width:100%;}
+  .sort-row{display:flex;justify-content:space-between;align-items:center;margin:4px 2px 10px;}
+  .sort-row .meta{font-size:12px;color:var(--ink-soft);}
+  .sort-select{border:1px solid var(--line);background:var(--white);border-radius:8px;padding:5px 8px;font-size:12px;color:var(--ink);}
+
+  .item-card{
+    position:relative;
+    background:var(--white);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:13px 14px 13px 18px;
+    margin-bottom:10px;
+    box-shadow:var(--shadow);
+    display:flex;align-items:flex-start;gap:10px;
+  }
+  .item-card::before{
+    content:"";position:absolute;left:0;top:10px;bottom:10px;width:3px;
+    background:repeating-linear-gradient(to bottom, var(--rust) 0 6px, transparent 6px 12px);
+    border-radius:2px;
+  }
+  .item-card-body{flex:1;min-width:0;}
+  .item-name{font-size:15px;font-weight:600;color:var(--ink);line-height:1.35;}
+  .item-meta-row{display:flex;align-items:center;gap:8px;margin-top:5px;flex-wrap:wrap;}
+  .cat-pill{font-size:11px;background:var(--paper-soft);color:var(--ink-soft);padding:2px 8px;border-radius:999px;font-weight:600;}
+  .price-tag{font-size:12.5px;color:var(--moss);font-weight:700;}
+  .price-tag .label{color:var(--ink-soft);font-weight:500;margin-right:3px;}
+  .stamp{
+    flex-shrink:0;
+    width:54px;height:54px;border-radius:50%;
+    border:2px solid var(--rust);color:var(--rust);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    transform:rotate(-8deg);
+    font-weight:700;line-height:1;
+    background:rgba(181,81,43,0.04);
+  }
+  .stamp .num{font-size:17px;font-family:'JetBrains Mono',monospace;}
+  .stamp .lbl{font-size:8px;letter-spacing:0.5px;margin-top:1px;}
+  .chev{align-self:center;color:var(--line);font-size:18px;}
+
+  .empty-state{
+    text-align:center;padding:60px 24px;color:var(--ink-soft);
+  }
+  .empty-state .big{font-size:38px;margin-bottom:10px;}
+  .empty-state h3{margin:0 0 6px;color:var(--ink);}
+  .empty-state p{font-size:13.5px;line-height:1.6;max-width:340px;margin:0 auto;}
+
+  /* ---------- FAB ---------- */
+  .fab{
+    position:fixed;bottom:22px;right:20px;z-index:40;
+    width:58px;height:58px;border-radius:50%;
+    background:var(--rust);color:var(--white);border:none;
+    font-size:26px;box-shadow:0 6px 16px rgba(181,81,43,0.45);
+    display:flex;align-items:center;justify-content:center;
+  }
+  .fab:active{transform:scale(0.95);}
+
+  /* ---------- Sheet / Modal ---------- */
+  .overlay{
+    position:fixed;inset:0;background:rgba(20,24,38,0.5);z-index:50;
+    display:flex;align-items:flex-end;justify-content:center;
+  }
+  .overlay.center{align-items:center;padding:16px;}
+  .sheet{
+    background:var(--paper);width:100%;max-width:560px;
+    border-radius:18px 18px 0 0;
+    max-height:92vh;display:flex;flex-direction:column;
+    box-shadow:0 -8px 30px rgba(0,0,0,0.25);
+    animation:slideUp 0.22s ease-out;
+  }
+  .overlay.center .sheet{border-radius:18px;max-height:88vh;}
+  @keyframes slideUp{from{transform:translateY(24px);opacity:0.4;}to{transform:translateY(0);opacity:1;}}
+  .sheet-handle{width:38px;height:4px;background:var(--line);border-radius:99px;margin:10px auto 2px;}
+  .sheet-header{display:flex;align-items:center;justify-content:space-between;padding:8px 18px 12px;border-bottom:1px solid var(--line);}
+  .sheet-header h2{margin:0;font-size:17px;}
+  .sheet-body{padding:16px 18px;overflow-y:auto;flex:1;}
+  .sheet-footer{padding:12px 18px 18px;border-top:1px solid var(--line);display:flex;gap:10px;}
+  .close-x{background:none;border:none;font-size:20px;color:var(--ink-soft);padding:4px 8px;}
+
+  .field{margin-bottom:14px;}
+  .field label{display:block;font-size:12.5px;font-weight:600;color:var(--ink-soft);margin-bottom:5px;}
+  .field input[type=text],.field input[type=password],.field input[type=number],.field input[type=date],.field select,.field textarea{
+    width:100%;padding:10px 11px;border:1px solid var(--line);border-radius:9px;
+    background:var(--white);font-size:14px;color:var(--ink);outline:none;
+  }
+  .field input:focus,.field select:focus,.field textarea:focus{border-color:var(--ink);}
+  .field .hint{font-size:11.5px;color:var(--ink-soft);margin-top:4px;line-height:1.5;}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;}
+
+  .btn{
+    border:none;border-radius:10px;padding:11px 16px;font-size:14px;font-weight:700;
+    display:flex;align-items:center;justify-content:center;gap:6px;
+  }
+  .btn-primary{background:var(--ink);color:var(--white);flex:1;}
+  .btn-rust{background:var(--rust);color:var(--white);flex:1;}
+  .btn-ghost{background:var(--white);color:var(--ink);border:1px solid var(--line);flex:1;}
+  .btn-danger{background:var(--white);color:var(--danger);border:1px solid var(--rust-soft);}
+  .btn:disabled{opacity:0.5;}
+  .btn-sm{padding:7px 11px;font-size:12.5px;border-radius:8px;}
+  .btn-block{width:100%;}
+
+  .divider-stamp{display:flex;align-items:center;gap:10px;margin:18px 0;color:var(--ink-soft);font-size:11.5px;font-weight:600;}
+  .divider-stamp::before,.divider-stamp::after{content:"";flex:1;height:1px;background:var(--line);}
+
+  .drive-status{display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:10px;background:var(--paper-soft);font-size:13px;margin-bottom:10px;}
+  .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+  .dot.on{background:var(--moss);}
+  .dot.off{background:var(--ink-soft);}
+
+  .file-pick-zone{
+    border:2px dashed var(--line);border-radius:12px;padding:26px 14px;text-align:center;color:var(--ink-soft);
+    background:var(--white);font-size:13px;
+  }
+  .file-thumb-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--paper-soft);}
+  .file-thumb-row img{width:42px;height:42px;object-fit:cover;border-radius:7px;border:1px solid var(--line);}
+  .file-thumb-row .fname{flex:1;font-size:12.5px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .status-pill{font-size:11px;font-weight:700;padding:3px 8px;border-radius:99px;flex-shrink:0;}
+  .status-pill.wait{background:var(--paper-soft);color:var(--ink-soft);}
+  .status-pill.work{background:#FDE8D4;color:var(--rust);}
+  .status-pill.done{background:#DCEAE2;color:var(--moss);}
+  .status-pill.err{background:#F4DAD5;color:var(--danger);}
+
+  .review-card{background:var(--white);border:1px solid var(--line);border-radius:12px;padding:13px;margin-bottom:12px;}
+  .review-card .src{font-size:11px;color:var(--ink-soft);margin-bottom:8px;display:flex;justify-content:space-between;}
+  .remove-row-btn{background:none;border:none;color:var(--danger);font-size:12px;font-weight:700;}
+
+  .history-row{
+    display:flex;align-items:flex-start;justify-content:space-between;gap:10px;
+    padding:12px 0;border-bottom:1px solid var(--paper-soft);
+  }
+  .history-row:last-child{border-bottom:none;}
+  .history-main .date{font-size:11.5px;color:var(--ink-soft);font-family:'JetBrains Mono',monospace;}
+  .history-main .supplier{font-size:13.5px;font-weight:600;margin-top:2px;}
+  .history-main .qtyprice{font-size:13px;margin-top:3px;color:var(--ink);}
+  .history-actions{display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0;}
+  .link-btn{background:none;border:none;color:var(--ink);font-size:12px;font-weight:700;text-decoration:underline;padding:2px 0;}
+  .icon-mini{background:none;border:none;color:var(--ink-soft);font-size:14px;padding:2px 5px;}
+
+  .toast{
+    position:fixed;bottom:90px;left:50%;transform:translateX(-50%);
+    background:var(--ink);color:var(--white);padding:11px 18px;border-radius:10px;
+    font-size:13px;z-index:90;box-shadow:var(--shadow);max-width:88vw;text-align:center;
+  }
+  .toast.error{background:var(--danger);}
+
+  .match-badge{font-size:11px;padding:2px 7px;border-radius:6px;font-weight:700;}
+  .match-badge.found{background:#DCEAE2;color:var(--moss);}
+  .match-badge.new{background:#FDE8D4;color:var(--rust);}
+
+  @media (min-width:640px){
+    .topbar-row,.topbar{padding-left:6px;padding-right:6px;}
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" data-presets="react">
+const { useState, useEffect, useMemo, useRef, useCallback } = React;
+
+/* ========================= CONSTANTS ========================= */
+const STORAGE_KEY = "quotelog_v1_data";
+const SETTINGS_KEY = "quotelog_v1_settings";
+const DEFAULT_CATEGORIES = ["อุปกรณ์วิทยาศาสตร์", "อุปกรณ์สำนักงาน", "บรรจุภัณฑ์", "วัตถุดิบ", "อื่นๆ"];
+const DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.file";
+const DRIVE_FOLDER_NAME = "QuotationApp_Documents";
+
+const EXTRACTION_PROMPT = `อ่านใบเสนอราคา / ใบสั่งซื้อ / invoice ในภาพนี้ แล้วดึงข้อมูลรายการสินค้าทุกรายการที่ปรากฏ
+
+ตอบกลับเป็น JSON array เท่านั้น ห้ามมีข้อความอื่นใดนอกเหนือ JSON ห้ามใช้ markdown code block
+
+แต่ละ object ต้องมีฟิลด์ตรงนี้เท่านั้น:
+{
+  "supplier": ชื่อบริษัทผู้ขาย/ผู้ออกใบเสนอราคา (string หรือ null),
+  "itemName": ชื่อสินค้าหรือรายการ (string),
+  "quantity": จำนวนที่สั่งซื้อ (number หรือ null),
+  "unit": หน่วยนับ เช่น kg, ชิ้น, ขวด, ลัง (string หรือ null),
+  "unitPrice": ราคาต่อหน่วย (number หรือ null),
+  "totalPrice": ราคารวมของรายการนั้น (number หรือ null),
+  "currency": สกุลเงิน เช่น THB, USD (string, ถ้าไม่ระบุให้ใช้ "THB"),
+  "date": วันที่ออกเอกสาร รูปแบบ YYYY-MM-DD (string หรือ null),
+  "docNumber": เลขที่เอกสาร/เลขที่ใบเสนอราคา (string หรือ null)
+}
+
+ถ้าอ่านไม่ชัดเจนหรือไม่มีข้อมูลในฟิลด์ใด ให้ใส่ null ห้ามเดาหรือสร้างข้อมูลขึ้นเอง
+ถ้าในภาพมีสินค้าหลายรายการ ให้แยกเป็นหลาย object ใน array เดียวกัน`;
+
+/* ========================= UTIL: storage ========================= */
+function loadJSON(key, fallback) {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : fallback;
+  } catch (e) { return fallback; }
+}
+function saveJSON(key, value) {
+  try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) { console.error("save failed", e); }
+}
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+function fmtMoney(n, cur) {
+  if (n === null || n === undefined || n === "") return "—";
+  const num = Number(n);
+  if (isNaN(num)) return String(n);
+  return num.toLocaleString("th-TH", { maximumFractionDigits: 2 }) + " " + (cur || "THB");
+}
+function fmtDate(d) {
+  if (!d) return "—";
+  return d;
+}
+
+/* ========================= UTIL: matching ========================= */
+function normalize(s) {
+  return (s || "").toString().trim().toLowerCase().replace(/\s+/g, " ");
+}
+function bigrams(s) {
+  const arr = [];
+  for (let i = 0; i < s.length - 1; i++) arr.push(s.substring(i, i + 2));
+  return arr.length ? arr : [s];
+}
+function diceScore(a, b) {
+  a = normalize(a); b = normalize(b);
+  if (!a || !b) return 0;
+  if (a === b) return 1;
+  const g1 = bigrams(a), g2 = bigrams(b);
+  let matches = 0;
+  const used = new Array(g2.length).fill(false);
+  for (const g of g1) {
+    const idx = g2.findIndex((x, i) => !used[i] && x === g);
+    if (idx !== -1) { matches++; used[idx] = true; }
+  }
+  return (2 * matches) / (g1.length + g2.length || 1);
+}
+function findBestMatch(name, items) {
+  let best = null, bestScore = 0;
+  for (const it of items) {
+    const s = diceScore(name, it.name);
+    if (s > bestScore) { bestScore = s; best = it; }
+  }
+  if (best && bestScore >= 0.55) return { item: best, score: bestScore };
+  return null;
+}
+
+/* ========================= UTIL: image compress ========================= */
+function fileToCompressed(file, maxWidth, quality) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const img = new Image();
+      img.onload = () => {
+        const scale = Math.min(1, maxWidth / img.width);
+        const w = Math.round(img.width * scale);
+        const h = Math.round(img.height * scale);
+        const canvas = document.createElement("canvas");
+        canvas.width = w; canvas.height = h;
+        const ctx = canvas.getContext("2d");
+        ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, w, h);
+        ctx.drawImage(img, 0, 0, w, h);
+        const dataUrl = canvas.toDataURL("image/jpeg", quality);
+        resolve({ dataUrl, base64: dataUrl.split(",")[1], mimeType: "image/jpeg" });
+      };
+      img.onerror = reject;
+      img.src = ev.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+function dataUrlToBlob(dataUrl) {
+  const [head, b64] = dataUrl.split(",");
+  const mime = head.match(/data:(.*?);/)[1];
+  const bin = atob(b64);
+  const arr = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+  return new Blob([arr], { type: mime });
+}
+
+/* ========================= API: Claude extraction ========================= */
+async function extractFromImage(apiKey, base64, mimeType) {
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": apiKey,
+      "anthropic-version": "2023-06-01",
+      "anthropic-dangerous-direct-browser-access": "true"
+    },
+    body: JSON.stringify({
+      model: "claude-sonnet-4-6",
+      max_tokens: 2000,
+      messages: [{
+        role: "user",
+        content: [
+          { type: "image", source: { type: "base64", media_type: mimeType, data: base64 } },
+          { type: "text", text: EXTRACTION_PROMPT }
+        ]
+      }]
+    })
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error?.message || ("API error " + res.status));
+  }
+  const data = await res.json();
+  const text = data.content.filter(b => b.type === "text").map(b => b.text).join("");
+  const clean = text.replace(/```json|```/g, "").trim();
+  const parsed = JSON.parse(clean);
+  return Array.isArray(parsed) ? parsed : [parsed];
+}
+
+/* ========================= API: Google Drive ========================= */
+function ensureFolder(accessToken) {
+  const q = encodeURIComponent(`name='${DRIVE_FOLDER_NAME}' and mimeType='application/vnd.google-apps.folder' and trashed=false`);
+  return fetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name)`, {
+    headers: { Authorization: "Bearer " + accessToken }
+  }).then(r => r.json()).then(d => {
+    if (d.files && d.files.length > 0) return d.files[0].id;
+    return fetch("https://www.googleapis.com/drive/v3/files", {
+      method: "POST",
+      headers: { Authorization: "Bearer " + accessToken, "Content-Type": "application/json" },
+      body: JSON.stringify({ name: DRIVE_FOLDER_NAME, mimeType: "application/vnd.google-apps.folder" })
+    }).then(r => r.json()).then(d2 => d2.id);
+  });
+}
+function uploadToDrive(accessToken, folderId, blob, filename) {
+  const metadata = { name: filename, parents: [folderId] };
+  const form = new FormData();
+  form.append("metadata", new Blob([JSON.stringify(metadata)], { type: "application/json" }));
+  form.append("file", blob, filename);
+  return fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,webViewLink", {
+    method: "POST",
+    headers: { Authorization: "Bearer " + accessToken },
+    body: form
+  }).then(r => { if (!r.ok) throw new Error("อัปโหลดขึ้น Drive ไม่สำเร็จ"); return r.json(); });
+}
+
+/* ========================= SMALL UI PIECES ========================= */
+function Toast({ msg, error, onDone }) {
+  useEffect(() => { const t = setTimeout(onDone, 2600); return () => clearTimeout(t); }, []);
+  if (!msg) return null;
+  return <div className={"toast" + (error ? " error" : "")}>{msg}</div>;
+}
+
+function Sheet({ title, onClose, children, footer, center }) {
+  return (
+    <div className={"overlay" + (center ? " center" : "")} onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="sheet">
+        {!center && <div className="sheet-handle"></div>}
+        <div className="sheet-header">
+          <h2>{title}</h2>
+          <button className="close-x" onClick={onClose}>✕</button>
+        </div>
+        <div className="sheet-body">{children}</div>
+        {footer && <div className="sheet-footer">{footer}</div>}
+      </div>
+    </div>
+  );
+}
+
+/* ========================= MAIN APP ========================= */
+function App() {
+  const [items, setItems] = useState(() => loadJSON(STORAGE_KEY, []));
+  const [settings, setSettings] = useState(() => loadJSON(SETTINGS_KEY, {
+    apiKey: "", googleClientId: "", driveFolderId: "", driveConnected: false
+  }));
+  const [query, setQuery] = useState("");
+  const [activeCat, setActiveCat] = useState("ทั้งหมด");
+  const [sortBy, setSortBy] = useState("recent");
+  const [selectedId, setSelectedId] = useState(null);
+  const [showUpload, setShowUpload] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [toast, setToast] = useState(null);
+  const [driveToken, setDriveToken] = useState(null);
+  const tokenClientRef = useRef(null);
+
+  useEffect(() => { saveJSON(STORAGE_KEY, items); }, [items]);
+  useEffect(() => { saveJSON(SETTINGS_KEY, settings); }, [settings]);
+
+  function notify(msg, isError) { setToast({ msg, error: !!isError }); }
+
+  /* ---- categories present ---- */
+  const categories = useMemo(() => {
+    const set = new Set(DEFAULT_CATEGORIES);
+    items.forEach(it => set.add(it.category || "อื่นๆ"));
+    return Array.from(set);
+  }, [items]);
+
+  const categoryCounts = useMemo(() => {
+    const c = {};
+    items.forEach(it => { c[it.category || "อื่นๆ"] = (c[it.category || "อื่นๆ"] || 0) + 1; });
+    return c;
+  }, [items]);
+
+  /* ---- filtered / sorted list ---- */
+  const visibleItems = useMemo(() => {
+    let list = items;
+    if (activeCat !== "ทั้งหมด") list = list.filter(it => (it.category || "อื่นๆ") === activeCat);
+    if (query.trim()) {
+      const q = normalize(query);
+      list = list.filter(it =>
+        normalize(it.name).includes(q) ||
+        it.history.some(h => normalize(h.supplier).includes(q))
+      );
+    }
+    const lastDate = (it) => it.history.length ? it.history.reduce((a, h) => h.date && h.date > a ? h.date : a, "") : "";
+    const lastPrice = (it) => it.history.length ? it.history[it.history.length - 1].unitPrice : null;
+    list = [...list];
+    if (sortBy === "recent") list.sort((a, b) => lastDate(b).localeCompare(lastDate(a)));
+    else if (sortBy === "name") list.sort((a, b) => a.name.localeCompare(b.name, "th"));
+    else if (sortBy === "priceHigh") list.sort((a, b) => (lastPrice(b) ?? -1) - (lastPrice(a) ?? -1));
+    else if (sortBy === "priceLow") list.sort((a, b) => (lastPrice(a) ?? Infinity) - (lastPrice(b) ?? Infinity));
+    else if (sortBy === "mostHistory") list.sort((a, b) => b.history.length - a.history.length);
+    return list;
+  }, [items, activeCat, query, sortBy]);
+
+  const selectedItem = items.find(it => it.id === selectedId) || null;
+
+  /* ---- Google Drive auth ---- */
+  function ensureTokenClient(onToken) {
+    if (!window.google || !window.google.accounts) return null;
+    if (!tokenClientRef.current) {
+      tokenClientRef.current = google.accounts.oauth2.initTokenClient({
+        client_id: settings.googleClientId,
+        scope: DRIVE_SCOPE,
+        callback: () => {}
+      });
+    }
+    tokenClientRef.current.callback = (resp) => {
+      if (resp && resp.access_token) {
+        const tok = { access_token: resp.access_token, expiresAt: Date.now() + (resp.expires_in || 3500) * 1000 };
+        setDriveToken(tok);
+        onToken && onToken(tok.access_token);
+      } else {
+        onToken && onToken(null);
+      }
+    };
+    return tokenClientRef.current;
+  }
+
+  function connectDrive() {
+    if (!settings.googleClientId) { notify("กรุณากรอก Google Client ID ในตั้งค่าก่อน", true); return; }
+    const tc = ensureTokenClient(async (token) => {
+      if (!token) { notify("เชื่อมต่อ Google Drive ไม่สำเร็จ", true); return; }
+      try {
+        const folderId = await ensureFolder(token);
+        setSettings(s => ({ ...s, driveFolderId: folderId, driveConnected: true }));
+        notify("เชื่อมต่อ Google Drive สำเร็จ");
+      } catch (e) {
+        notify("เชื่อมต่อสำเร็จ แต่สร้างโฟลเดอร์ไม่ได้: " + e.message, true);
+      }
+    });
+    if (!tc) { notify("Google API ยังโหลดไม่เสร็จ รอสักครู่แล้วลองใหม่", true); return; }
+    tc.requestAccessToken({ prompt: "consent" });
+  }
+
+  function disconnectDrive() {
+    setDriveToken(null);
+    setSettings(s => ({ ...s, driveConnected: false, driveFolderId: "" }));
+    notify("ยกเลิกการเชื่อมต่อ Google Drive แล้ว");
+  }
+
+  function getAccessToken() {
+    return new Promise((resolve, reject) => {
+      if (driveToken && Date.now() < driveToken.expiresAt - 60000) { resolve(driveToken.access_token); return; }
+      const tc = ensureTokenClient((token) => token ? resolve(token) : reject(new Error("ไม่ได้รับสิทธิ์เข้าถึง Drive")));
+      if (!tc) { reject(new Error("Google API ยังไม่พร้อม")); return; }
+      tc.requestAccessToken({ prompt: "" });
+    });
+  }
+
+  /* ---- save extracted rows into items ---- */
+  function commitRows(rows) {
+    setItems(prevItems => {
+      let next = [...prevItems];
+      for (const row of rows) {
+        const idx = next.findIndex(it => it.id === row.targetItemId);
+        const historyEntry = {
+          id: uid(),
+          date: row.date || null,
+          supplier: row.supplier || null,
+          quantity: row.quantity ?? null,
+          unit: row.unit || null,
+          unitPrice: row.unitPrice ?? null,
+          totalPrice: row.totalPrice ?? null,
+          currency: row.currency || "THB",
+          docNumber: row.docNumber || null,
+          driveFileId: row.driveFileId || null,
+          driveViewLink: row.driveViewLink || null,
+          localThumb: row.localThumb || null,
+          addedAt: new Date().toISOString()
+        };
+        if (idx >= 0) {
+          next[idx] = { ...next[idx], history: [...next[idx].history, historyEntry] };
+        } else {
+          next.push({
+            id: row.targetItemId,
+            name: row.itemName,
+            category: row.category || "อื่นๆ",
+            createdAt: new Date().toISOString(),
+            history: [historyEntry]
+          });
+        }
+      }
+      return next;
+    });
+  }
+
+  /* ---- item management ---- */
+  function renameItem(id, name) { setItems(p => p.map(it => it.id === id ? { ...it, name } : it)); }
+  function recategorize(id, category) { setItems(p => p.map(it => it.id === id ? { ...it, category } : it)); }
+  function deleteHistory(itemId, historyId) {
+    setItems(p => p.map(it => it.id === itemId ? { ...it, history: it.history.filter(h => h.id !== historyId) } : it).filter(it => it.history.length > 0 || it.id !== itemId ? true : false));
+  }
+  function deleteItem(id) {
+    setItems(p => p.filter(it => it.id !== id));
+    setSelectedId(null);
+  }
+  function mergeInto(sourceId, targetId) {
+    setItems(p => {
+      const src = p.find(it => it.id === sourceId);
+      if (!src) return p;
+      return p.filter(it => it.id !== sourceId).map(it => it.id === targetId ? { ...it, history: [...it.history, ...src.history] } : it);
+    });
+    setSelectedId(targetId);
+  }
+
+  /* ---- backup ---- */
+  function exportBackup() {
+    const blob = new Blob([JSON.stringify({ items, exportedAt: new Date().toISOString() }, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = "quotelog-backup-" + new Date().toISOString().slice(0, 10) + ".json";
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+  function importBackup(file) {
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const parsed = JSON.parse(ev.target.result);
+        const incoming = Array.isArray(parsed.items) ? parsed.items : Array.isArray(parsed) ? parsed : null;
+        if (!incoming) throw new Error("รูปแบบไฟล์ไม่ถูกต้อง");
+        setItems(prev => {
+          const merged = [...prev];
+          incoming.forEach(inc => {
+            const idx = merged.findIndex(it => it.id === inc.id);
+            if (idx >= 0) merged[idx] = inc; else merged.push(inc);
+          });
+          return merged;
+        });
+        notify("นำเข้าข้อมูลสำเร็จ (" + incoming.length + " รายการ)");
+      } catch (e) {
+        notify("นำเข้าไฟล์ไม่สำเร็จ: " + e.message, true);
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  return (
+    <div>
+      <div className="topbar">
+        <div className="topbar-row">
+          <div className="topbar-title">
+            สมุดบันทึกใบเสนอราคา
+            <span className="sub">{items.length} รายการสินค้า • {items.reduce((a, it) => a + it.history.length, 0)} ใบเสนอราคา</span>
+          </div>
+          <button className="icon-btn" onClick={() => setShowSettings(true)} title="ตั้งค่า">⚙</button>
+        </div>
+        <div className="searchbar">
+          <span>🔎</span>
+          <input placeholder="ค้นหาชื่อสินค้า หรือ Supplier..." value={query} onChange={e => setQuery(e.target.value)} />
+        </div>
+      </div>
+
+      <div className="tabs">
+        {["ทั้งหมด", ...categories].map(cat => (
+          <button key={cat} className={"tab" + (activeCat === cat ? " active" : "")} onClick={() => setActiveCat(cat)}>
+            {cat}
+            <span className="count">{cat === "ทั้งหมด" ? items.length : (categoryCounts[cat] || 0)}</span>
+          </button>
+        ))}
+      </div>
+
+      <div className="list-wrap">
+        {items.length > 0 && (
+          <div className="sort-row">
+            <span className="meta">{visibleItems.length} รายการ</span>
+            <select className="sort-select" value={sortBy} onChange={e => setSortBy(e.target.value)}>
+              <option value="recent">เรียง: ล่าสุดก่อน</option>
+              <option value="name">เรียง: ชื่อ ก-ฮ</option>
+              <option value="priceHigh">เรียง: ราคาล่าสุดสูง-ต่ำ</option>
+              <option value="priceLow">เรียง: ราคาล่าสุดต่ำ-สูง</option>
+              <option value="mostHistory">เรียง: ซื้อบ่อยที่สุด</option>
+            </select>
+          </div>
+        )}
+
+        {items.length === 0 ? (
+          <div className="empty-state">
+            <div className="big">📋</div>
+            <h3>ยังไม่มีข้อมูล</h3>
+            <p>กดปุ่ม + ด้านขวาล่างเพื่อเริ่มเพิ่มใบเสนอราคาใบแรก ระบบจะอ่านข้อมูลให้อัตโนมัติด้วย AI หรือกรอกเองก็ได้</p>
+          </div>
+        ) : visibleItems.length === 0 ? (
+          <div className="empty-state">
+            <div className="big">🔍</div>
+            <h3>ไม่พบรายการที่ค้นหา</h3>
+            <p>ลองเปลี่ยนคำค้นหรือเลือกหมวดอื่น</p>
+          </div>
+        ) : (
+          visibleItems.map(it => {
+            const last = it.history[it.history.length - 1];
+            return (
+              <div key={it.id} className="item-card" onClick={() => setSelectedId(it.id)}>
+                <div className="item-card-body">
+                  <div className="item-name">{it.name}</div>
+                  <div className="item-meta-row">
+                    <span className="cat-pill">{it.category}</span>
+                    {last && <span className="price-tag"><span className="label">ล่าสุด</span>{fmtMoney(last.unitPrice, last.currency)}{last.unit ? " / " + last.unit : ""}</span>}
+                  </div>
+                </div>
+                <div className="stamp"><span className="num">×{it.history.length}</span><span className="lbl">ประวัติ</span></div>
+                <div className="chev">›</div>
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      <button className="fab" onClick={() => setShowUpload(true)}>+</button>
+
+      {selectedItem && (
+        <ItemDetail
+          item={selectedItem}
+          allItems={items}
+          onClose={() => setSelectedId(null)}
+          onRename={renameItem}
+          onRecategorize={recategorize}
+          onDeleteHistory={deleteHistory}
+          onDeleteItem={deleteItem}
+          onMerge={mergeInto}
+          categories={categories}
+        />
+      )}
+
+      {showUpload && (
+        <UploadFlow
+          apiKey={settings.apiKey}
+          driveConnected={settings.driveConnected}
+          driveFolderId={settings.driveFolderId}
+          getAccessToken={getAccessToken}
+          existingItems={items}
+          categories={categories}
+          onClose={() => setShowUpload(false)}
+          onCommit={(rows) => { commitRows(rows); setShowUpload(false); notify("บันทึกข้อมูลสำเร็จ " + rows.length + " รายการ"); }}
+          notify={notify}
+        />
+      )}
+
+      {showSettings && (
+        <SettingsPanel
+          settings={settings}
+          setSettings={setSettings}
+          onClose={() => setShowSettings(false)}
+          onConnectDrive={connectDrive}
+          onDisconnectDrive={disconnectDrive}
+          onExport={exportBackup}
+          onImport={importBackup}
+          onWipe={() => { if (confirm("ลบข้อมูลทั้งหมดในเครื่องนี้? การกระทำนี้ย้อนกลับไม่ได้")) { setItems([]); notify("ลบข้อมูลทั้งหมดแล้ว"); } }}
+          notify={notify}
+        />
+      )}
+
+      {toast && <Toast msg={toast.msg} error={toast.error} onDone={() => setToast(null)} />}
+    </div>
+  );
+}
+
+/* ========================= ITEM DETAIL ========================= */
+function ItemDetail({ item, allItems, onClose, onRename, onRecategorize, onDeleteHistory, onDeleteItem, onMerge, categories }) {
+  const [editingName, setEditingName] = useState(false);
+  const [nameDraft, setNameDraft] = useState(item.name);
+  const [mergeMode, setMergeMode] = useState(false);
+
+  const sortedHistory = [...item.history].sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+  const otherItems = allItems.filter(it => it.id !== item.id);
+
+  return (
+    <Sheet title="รายละเอียดสินค้า" onClose={onClose}>
+      <div className="field">
+        <label>ชื่อสินค้า</label>
+        {editingName ? (
+          <div style={{ display: "flex", gap: 8 }}>
+            <input type="text" value={nameDraft} onChange={e => setNameDraft(e.target.value)} style={{ flex: 1, padding: 10, border: "1px solid var(--line)", borderRadius: 9 }} />
+            <button className="btn btn-primary btn-sm" onClick={() => { onRename(item.id, nameDraft); setEditingName(false); }}>บันทึก</button>
+          </div>
+        ) : (
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <strong style={{ fontSize: 16 }}>{item.name}</strong>
+            <button className="icon-mini" onClick={() => setEditingName(true)}>✎ แก้ไข</button>
+          </div>
+        )}
+      </div>
+
+      <div className="field">
+        <label>หมวด</label>
+        <select value={item.category} onChange={e => onRecategorize(item.id, e.target.value)}>
+          {categories.map(c => <option key={c} value={c}>{c}</option>)}
+        </select>
+      </div>
+
+      <div className="divider-stamp">ประวัติการซื้อ ({item.history.length} ครั้ง)</div>
+
+      {sortedHistory.map(h => (
+        <div className="history-row" key={h.id}>
+          <div className="history-main">
+            <div className="date mono">{fmtDate(h.date)} {h.docNumber ? "• เลขที่ " + h.docNumber : ""}</div>
+            <div className="supplier">{h.supplier || "ไม่ระบุ Supplier"}</div>
+            <div className="qtyprice">{fmtMoney(h.unitPrice, h.currency)}{h.unit ? " / " + h.unit : ""}{h.quantity ? "  •  จำนวน " + h.quantity : ""}</div>
+          </div>
+          <div className="history-actions">
+            {h.driveViewLink ? (
+              <button className="link-btn" onClick={() => window.open(h.driveViewLink, "_blank")}>ดูใบเสนอราคา</button>
+            ) : h.localThumb ? (
+              <button className="link-btn" onClick={() => { const w = window.open(); w.document.write('<img src="' + h.localThumb + '" style="max-width:100%">'); }}>ดูใบเสนอราคา</button>
+            ) : (
+              <span style={{ fontSize: 11, color: "var(--ink-soft)" }}>ไม่มีไฟล์แนบ</span>
+            )}
+            <button className="icon-mini" onClick={() => { if (confirm("ลบประวัติรายการนี้?")) onDeleteHistory(item.id, h.id); }}>🗑</button>
+          </div>
+        </div>
+      ))}
+
+      <div className="divider-stamp">จัดการรายการ</div>
+
+      {!mergeMode ? (
+        <button className="btn btn-ghost btn-block" style={{ marginBottom: 10 }} onClick={() => setMergeMode(true)}>🔗 รวมกับรายการอื่น (รายการซ้ำ)</button>
+      ) : (
+        <div className="field">
+          <label>เลือกรายการที่จะรวมเข้าด้วยกัน — ประวัติของ "{item.name}" จะถูกย้ายไปรวม</label>
+          <select onChange={e => { if (e.target.value && confirm("รวม \"" + item.name + "\" เข้ากับรายการที่เลือก?")) onMerge(item.id, e.target.value); }} defaultValue="">
+            <option value="" disabled>เลือกรายการปลายทาง...</option>
+            {otherItems.map(it => <option key={it.id} value={it.id}>{it.name}</option>)}
+          </select>
+        </div>
+      )}
+
+      <button className="btn btn-danger btn-block" onClick={() => { if (confirm("ลบสินค้านี้พร้อมประวัติทั้งหมด?")) onDeleteItem(item.id); }}>🗑 ลบรายการนี้ทั้งหมด</button>
+    </Sheet>
+  );
+}
+
+/* ========================= UPLOAD FLOW ========================= */
+function UploadFlow({ apiKey, driveConnected, driveFolderId, getAccessToken, existingItems, categories, onClose, onCommit, notify }) {
+  const [step, setStep] = useState("select"); // select | working | review
+  const [files, setFiles] = useState([]); // {id,file,name,thumb,base64,mime,status,error}
+  const [rows, setRows] = useState([]); // extracted+editable rows
+  const fileInputRef = useRef(null);
+
+  function handleFilesSelected(fileList) {
+    const arr = Array.from(fileList).map(f => ({ id: uid(), file: f, name: f.name, status: "wait" }));
+    setFiles(arr);
+  }
+
+  async function processAll() {
+    if (!apiKey) { notify("กรุณากรอก Anthropic API Key ในตั้งค่าก่อน หรือเลือก \"กรอกข้อมูลเอง\" ด้านล่าง", true); return; }
+    setStep("working");
+    const collectedRows = [];
+    for (const f of files) {
+      setFiles(prev => prev.map(p => p.id === f.id ? { ...p, status: "work" } : p));
+      try {
+        const compressed = await fileToCompressed(f.file, 1280, 0.8);
+        const thumbCompressed = await fileToCompressed(f.file, 640, 0.45);
+        const extracted = await extractFromImage(apiKey, compressed.base64, compressed.mimeType);
+        extracted.forEach(row => {
+          const match = findBestMatch(row.itemName, existingItems);
+          collectedRows.push({
+            rowId: uid(),
+            sourceFileId: f.id,
+            sourceFileName: f.name,
+            localThumb: thumbCompressed.dataUrl,
+            fullDataUrl: compressed.dataUrl,
+            itemName: row.itemName || "",
+            supplier: row.supplier || "",
+            quantity: row.quantity ?? "",
+            unit: row.unit || "",
+            unitPrice: row.unitPrice ?? "",
+            totalPrice: row.totalPrice ?? "",
+            currency: row.currency || "THB",
+            date: row.date || "",
+            docNumber: row.docNumber || "",
+            category: match ? match.item.category : (categories[0] || "อื่นๆ"),
+            targetItemId: match ? match.item.id : uid(),
+            matchFound: !!match
+          });
+        });
+        setFiles(prev => prev.map(p => p.id === f.id ? { ...p, status: "done" } : p));
+      } catch (e) {
+        setFiles(prev => prev.map(p => p.id === f.id ? { ...p, status: "err", error: e.message } : p));
+      }
+    }
+    setRows(collectedRows);
+    setStep("review");
+  }
+
+  function startManualEntry() {
+    setRows([{
+      rowId: uid(), sourceFileId: null, sourceFileName: "กรอกเอง", localThumb: null, fullDataUrl: null,
+      itemName: "", supplier: "", quantity: "", unit: "", unitPrice: "", totalPrice: "",
+      currency: "THB", date: "", docNumber: "", category: categories[0] || "อื่นๆ",
+      targetItemId: uid(), matchFound: false
+    }]);
+    setStep("review");
+  }
+
+  function addBlankRow() {
+    setRows(r => [...r, {
+      rowId: uid(), sourceFileId: null, sourceFileName: "กรอกเอง", localThumb: null, fullDataUrl: null,
+      itemName: "", supplier: "", quantity: "", unit: "", unitPrice: "", totalPrice: "",
+      currency: "THB", date: "", docNumber: "", category: categories[0] || "อื่นๆ",
+      targetItemId: uid(), matchFound: false
+    }]);
+  }
+
+  function updateRow(rowId, patch) {
+    setRows(prev => prev.map(r => r.rowId === rowId ? { ...r, ...patch } : r));
+  }
+  function removeRow(rowId) { setRows(prev => prev.filter(r => r.rowId !== rowId)); }
+
+  function setRowTarget(rowId, targetItemId) {
+    if (targetItemId === "__new__") {
+      updateRow(rowId, { targetItemId: uid(), matchFound: false });
+    } else {
+      const match = existingItems.find(it => it.id === targetItemId);
+      updateRow(rowId, { targetItemId, matchFound: true, category: match ? match.category : rows.find(r => r.rowId === rowId).category });
+    }
+  }
+
+  async function confirmSave() {
+    const cleaned = [];
+    for (const r of rows) {
+      if (!r.itemName.trim()) continue;
+      let driveFileId = null, driveViewLink = null, localThumb = r.localThumb;
+      if (r.fullDataUrl) {
+        if (driveConnected) {
+          try {
+            const token = await getAccessToken();
+            const blob = dataUrlToBlob(r.fullDataUrl);
+            const filename = (r.itemName || "doc").slice(0, 40).replace(/[^\w\u0E00-\u0E7F]+/g, "_") + "_" + (r.date || Date.now()) + ".jpg";
+            const result = await uploadToDrive(token, driveFolderId, blob, filename);
+            driveFileId = result.id;
+            driveViewLink = result.webViewLink || ("https://drive.google.com/file/d/" + result.id + "/view");
+            localThumb = null;
+          } catch (e) {
+            notify("อัปโหลดขึ้น Drive ไม่สำเร็จ (เก็บสำเนาในเครื่องแทน): " + e.message, true);
+          }
+        }
+      }
+      cleaned.push({
+        ...r,
+        quantity: r.quantity === "" ? null : Number(r.quantity),
+        unitPrice: r.unitPrice === "" ? null : Number(r.unitPrice),
+        totalPrice: r.totalPrice === "" ? null : Number(r.totalPrice),
+        driveFileId, driveViewLink, localThumb
+      });
+    }
+    if (cleaned.length === 0) { notify("กรุณากรอกชื่อสินค้าอย่างน้อย 1 รายการ", true); return; }
+    onCommit(cleaned);
+  }
+
+  return (
+    <Sheet title="เพิ่มใบเสนอราคา" onClose={onClose} footer={
+      step === "select" ? (
+        <button className="btn btn-rust btn-block" disabled={files.length === 0} onClick={processAll}>
+          อ่านข้อมูลด้วย AI ({files.length} ไฟล์)
+        </button>
+      ) : step === "review" ? (
+        <>
+          <button className="btn btn-ghost" onClick={onClose}>ยกเลิก</button>
+          <button className="btn btn-primary" onClick={confirmSave}>บันทึกทั้งหมด ({rows.filter(r => r.itemName.trim()).length})</button>
+        </>
+      ) : null
+    }>
+      {step === "select" && (
+        <div>
+          <div className="file-pick-zone" onClick={() => fileInputRef.current.click()}>
+            📷 แตะเพื่อเลือกรูปใบเสนอราคา<br/>(เลือกได้มากกว่า 1 ไฟล์)
+            <input ref={fileInputRef} type="file" accept="image/*" multiple hidden onChange={e => handleFilesSelected(e.target.files)} />
+          </div>
+          {files.length > 0 && (
+            <div style={{ marginTop: 14 }}>
+              {files.map(f => (
+                <div className="file-thumb-row" key={f.id}>
+                  <span className="fname">{f.name}</span>
+                  <button className="remove-row-btn" onClick={() => setFiles(prev => prev.filter(p => p.id !== f.id))}>นำออก</button>
+                </div>
+              ))}
+            </div>
+          )}
+          <div className="divider-stamp">หรือ</div>
+          <button className="btn btn-ghost btn-block" onClick={startManualEntry}>✎ กรอกข้อมูลเอง (ไม่ใช้ AI)</button>
+          {!apiKey && <p className="hint" style={{ marginTop: 8 }}>* ยังไม่ได้กรอก Anthropic API Key ในตั้งค่า — ฟีเจอร์อ่านด้วย AI จะใช้ไม่ได้จนกว่าจะกรอกก่อน</p>}
+        </div>
+      )}
+
+      {step === "working" && (
+        <div>
+          {files.map(f => (
+            <div className="file-thumb-row" key={f.id}>
+              <span className="fname">{f.name}</span>
+              <span className={"status-pill " + f.status}>
+                {f.status === "wait" ? "รอ" : f.status === "work" ? "กำลังอ่าน..." : f.status === "done" ? "อ่านสำเร็จ" : "ผิดพลาด"}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {step === "review" && (
+        <div>
+          <p className="hint" style={{ marginBottom: 12 }}>ตรวจสอบและแก้ไขข้อมูลก่อนบันทึก — ระบบจับคู่รายการที่คล้ายกันให้อัตโนมัติ เปลี่ยนได้ถ้าจับคู่ผิด</p>
+          {rows.map(r => (
+            <div className="review-card" key={r.rowId}>
+              <div className="src">
+                <span>📄 {r.sourceFileName}</span>
+                <button className="remove-row-btn" onClick={() => removeRow(r.rowId)}>นำออก</button>
+              </div>
+
+              <div className="field">
+                <label>ชื่อสินค้า</label>
+                <input type="text" value={r.itemName} onChange={e => updateRow(r.rowId, { itemName: e.target.value })} />
+              </div>
+
+              <div className="field">
+                <label>จับคู่กับรายการ <span className={"match-badge " + (r.matchFound ? "found" : "new")}>{r.matchFound ? "พบรายการเดิม" : "รายการใหม่"}</span></label>
+                <select value={r.matchFound ? r.targetItemId : "__new__"} onChange={e => setRowTarget(r.rowId, e.target.value)}>
+                  <option value="__new__">🆕 สร้างเป็นรายการใหม่</option>
+                  {existingItems.map(it => <option key={it.id} value={it.id}>{it.name}</option>)}
+                </select>
+              </div>
+
+              <div className="row2">
+                <div className="field"><label>Supplier</label><input type="text" value={r.supplier} onChange={e => updateRow(r.rowId, { supplier: e.target.value })} /></div>
+                <div className="field"><label>วันที่</label><input type="date" value={r.date} onChange={e => updateRow(r.rowId, { date: e.target.value })} /></div>
+              </div>
+              <div className="row3">
+                <div className="field"><label>จำนวน</label><input type="number" value={r.quantity} onChange={e => updateRow(r.rowId, { quantity: e.target.value })} /></div>
+                <div className="field"><label>หน่วย</label><input type="text" value={r.unit} onChange={e => updateRow(r.rowId, { unit: e.target.value })} /></div>
+                <div className="field"><label>ราคา/หน่วย</label><input type="number" value={r.unitPrice} onChange={e => updateRow(r.rowId, { unitPrice: e.target.value })} /></div>
+              </div>
+              <div className="row2">
+                <div className="field"><label>ราคารวม</label><input type="number" value={r.totalPrice} onChange={e => updateRow(r.rowId, { totalPrice: e.target.value })} /></div>
+                <div className="field"><label>หมวด</label>
+                  <select value={r.category} onChange={e => updateRow(r.rowId, { category: e.target.value })}>
+                    {categories.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </div>
+              </div>
+            </div>
+          ))}
+          <button className="btn btn-ghost btn-block" onClick={addBlankRow}>+ เพิ่มแถวว่าง</button>
+        </div>
+      )}
+    </Sheet>
+  );
+}
+
+/* ========================= SETTINGS PANEL ========================= */
+function SettingsPanel({ settings, setSettings, onClose, onConnectDrive, onDisconnectDrive, onExport, onImport, onWipe }) {
+  const [apiKeyDraft, setApiKeyDraft] = useState(settings.apiKey);
+  const [clientIdDraft, setClientIdDraft] = useState(settings.googleClientId);
+  const importRef = useRef(null);
+
+  return (
+    <Sheet title="ตั้งค่า" onClose={onClose} center>
+      <div className="divider-stamp" style={{ marginTop: 0 }}>การอ่านข้อมูลด้วย AI</div>
+      <div className="field">
+        <label>Anthropic API Key</label>
+        <input type="password" placeholder="sk-ant-..." value={apiKeyDraft} onChange={e => setApiKeyDraft(e.target.value)} onBlur={() => setSettings(s => ({ ...s, apiKey: apiKeyDraft }))} />
+        <div className="hint">ใช้สำหรับให้ AI อ่านข้อมูลจากรูปใบเสนอราคา เก็บไว้ในเครื่องนี้เท่านั้น ไม่ส่งไปที่อื่น ขอรับ API Key ได้ที่ console.anthropic.com</div>
+      </div>
+
+      <div className="divider-stamp">เก็บไฟล์ใบเสนอราคาต้นฉบับ</div>
+      <div className="drive-status">
+        <span className={"dot " + (settings.driveConnected ? "on" : "off")}></span>
+        {settings.driveConnected ? "เชื่อมต่อ Google Drive แล้ว" : "ยังไม่ได้เชื่อมต่อ Google Drive"}
+      </div>
+      <div className="field">
+        <label>Google OAuth Client ID</label>
+        <input type="text" placeholder="xxxxxxxxxx.apps.googleusercontent.com" value={clientIdDraft} onChange={e => setClientIdDraft(e.target.value)} onBlur={() => setSettings(s => ({ ...s, googleClientId: clientIdDraft }))} />
+        <div className="hint">ขอ Client ID จาก Google Cloud Console (ใช้บัญชี Google ของตัวเอง) — ต้องสร้างหลังจาก deploy ขึ้น GitHub Pages แล้ว เพราะต้องใส่ URL ของเว็บที่ deploy ไว้</div>
+      </div>
+      {settings.driveConnected ? (
+        <button className="btn btn-ghost btn-block" onClick={onDisconnectDrive}>ยกเลิกการเชื่อมต่อ Drive</button>
+      ) : (
+        <button className="btn btn-rust btn-block" onClick={onConnectDrive}>🔗 เชื่อมต่อ Google Drive</button>
+      )}
+      <p className="hint" style={{ marginTop: 8 }}>หากไม่เชื่อมต่อ Drive ระบบจะเก็บรูปย่อไว้ในเครื่องนี้แทน (จำกัดพื้นที่ ~5MB)</p>
+
+      <div className="divider-stamp">ข้อมูลในเครื่องนี้</div>
+      <p className="hint" style={{ marginTop: -4, marginBottom: 10 }}>ข้อมูลทั้งหมดเก็บอยู่ในเบราว์เซอร์นี้เท่านั้น หากเปลี่ยนเครื่อง/เปลี่ยนเบราว์เซอร์ ข้อมูลจะไม่ติดไปด้วย — แนะนำให้ Export ไฟล์สำรองเก็บไว้เป็นประจำ</p>
+      <div className="row2">
+        <button className="btn btn-ghost" onClick={onExport}>⬇ Export สำรองข้อมูล</button>
+        <button className="btn btn-ghost" onClick={() => importRef.current.click()}>⬆ นำเข้าไฟล์สำรอง</button>
+      </div>
+      <input ref={importRef} type="file" accept="application/json" hidden onChange={e => { if (e.target.files[0]) onImport(e.target.files[0]); }} />
+
+      <div className="divider-stamp">โซนอันตราย</div>
+      <button className="btn btn-danger btn-block" onClick={onWipe}>ลบข้อมูลทั้งหมดในเครื่องนี้</button>
+    </Sheet>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>
