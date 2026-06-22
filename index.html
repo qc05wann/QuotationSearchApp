@@ -13,6 +13,7 @@
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
 <script src="https://unpkg.com/@babel/standalone@7/babel.min.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 
 <style>
   :root{
@@ -351,6 +352,31 @@ function fileToCompressed(file, maxWidth, quality) {
     reader.onerror = reject;
     reader.readAsDataURL(file);
   });
+}
+function isPdfFile(file) {
+  return file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
+}
+if (window.pdfjsLib) {
+  pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+}
+async function renderPdfPages(file, maxWidth, quality) {
+  const arrayBuffer = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+  const pages = [];
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i);
+    const baseViewport = page.getViewport({ scale: 1 });
+    const scale = maxWidth / baseViewport.width;
+    const viewport = page.getViewport({ scale });
+    const canvas = document.createElement("canvas");
+    canvas.width = viewport.width; canvas.height = viewport.height;
+    const ctx = canvas.getContext("2d");
+    ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, canvas.width, canvas.height);
+    await page.render({ canvasContext: ctx, viewport }).promise;
+    const dataUrl = canvas.toDataURL("image/jpeg", quality);
+    pages.push({ dataUrl, base64: dataUrl.split(",")[1], mimeType: "image/jpeg", pageNum: i });
+  }
+  return pages;
 }
 function dataUrlToBlob(dataUrl) {
   const [head, b64] = dataUrl.split(",");
@@ -855,31 +881,43 @@ function UploadFlow({ apiKey, driveConnected, driveFolderId, getAccessToken, exi
     for (const f of files) {
       setFiles(prev => prev.map(p => p.id === f.id ? { ...p, status: "work" } : p));
       try {
-        const compressed = await fileToCompressed(f.file, 1280, 0.8);
-        const thumbCompressed = await fileToCompressed(f.file, 640, 0.45);
-        const extracted = await extractFromImage(apiKey, compressed.base64, compressed.mimeType);
-        extracted.forEach(row => {
-          const match = findBestMatch(row.itemName, existingItems);
-          collectedRows.push({
-            rowId: uid(),
-            sourceFileId: f.id,
-            sourceFileName: f.name,
-            localThumb: thumbCompressed.dataUrl,
-            fullDataUrl: compressed.dataUrl,
-            itemName: row.itemName || "",
-            supplier: row.supplier || "",
-            quantity: row.quantity ?? "",
-            unit: row.unit || "",
-            unitPrice: row.unitPrice ?? "",
-            totalPrice: row.totalPrice ?? "",
-            currency: row.currency || "THB",
-            date: row.date || "",
-            docNumber: row.docNumber || "",
-            category: match ? match.item.category : (categories[0] || "อื่นๆ"),
-            targetItemId: match ? match.item.id : uid(),
-            matchFound: !!match
+        let pages; // [{dataUrl, base64, mimeType}]
+        let thumbPages;
+        if (isPdfFile(f.file)) {
+          pages = await renderPdfPages(f.file, 1280, 0.8);
+          thumbPages = await renderPdfPages(f.file, 640, 0.45);
+        } else {
+          pages = [await fileToCompressed(f.file, 1280, 0.8)];
+          thumbPages = [await fileToCompressed(f.file, 640, 0.45)];
+        }
+        for (let pi = 0; pi < pages.length; pi++) {
+          const compressed = pages[pi];
+          const thumbCompressed = thumbPages[pi] || thumbPages[0];
+          const pageLabel = pages.length > 1 ? (f.name + " (หน้า " + (pi + 1) + "/" + pages.length + ")") : f.name;
+          const extracted = await extractFromImage(apiKey, compressed.base64, compressed.mimeType);
+          extracted.forEach(row => {
+            const match = findBestMatch(row.itemName, existingItems);
+            collectedRows.push({
+              rowId: uid(),
+              sourceFileId: f.id,
+              sourceFileName: pageLabel,
+              localThumb: thumbCompressed.dataUrl,
+              fullDataUrl: compressed.dataUrl,
+              itemName: row.itemName || "",
+              supplier: row.supplier || "",
+              quantity: row.quantity ?? "",
+              unit: row.unit || "",
+              unitPrice: row.unitPrice ?? "",
+              totalPrice: row.totalPrice ?? "",
+              currency: row.currency || "THB",
+              date: row.date || "",
+              docNumber: row.docNumber || "",
+              category: match ? match.item.category : (categories[0] || "อื่นๆ"),
+              targetItemId: match ? match.item.id : uid(),
+              matchFound: !!match
+            });
           });
-        });
+        }
         setFiles(prev => prev.map(p => p.id === f.id ? { ...p, status: "done" } : p));
       } catch (e) {
         setFiles(prev => prev.map(p => p.id === f.id ? { ...p, status: "err", error: e.message } : p));
@@ -970,8 +1008,8 @@ function UploadFlow({ apiKey, driveConnected, driveFolderId, getAccessToken, exi
       {step === "select" && (
         <div>
           <div className="file-pick-zone" onClick={() => fileInputRef.current.click()}>
-            📷 แตะเพื่อเลือกรูปใบเสนอราคา<br/>(เลือกได้มากกว่า 1 ไฟล์)
-            <input ref={fileInputRef} type="file" accept="image/*" multiple hidden onChange={e => handleFilesSelected(e.target.files)} />
+            📷 แตะเพื่อเลือกไฟล์ใบเสนอราคา (รูปภาพ หรือ PDF)<br/>(เลือกได้มากกว่า 1 ไฟล์)
+            <input ref={fileInputRef} type="file" accept="image/*,application/pdf,.pdf" multiple hidden onChange={e => handleFilesSelected(e.target.files)} />
           </div>
           {files.length > 0 && (
             <div style={{ marginTop: 14 }}>
